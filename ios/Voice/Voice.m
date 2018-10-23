@@ -18,8 +18,8 @@
 @property NSString *sessionId;
 // Recording options
 @property AVAudioFile *outputFile;
-// @property BOOL recordingEnabled;
-// @property NSString *recordingFileName;
+ @property BOOL recordingEnabled;
+ @property NSString *recordingFileName;
 /** Previous category the user was on prior to starting speech recognition */
 @property NSString *priorAudioCategory;
 
@@ -189,14 +189,13 @@
         }
         
         // Finish speech recognition
-        if ((isFinal && !self.continuous) || !self.recognitionTask || self.recognitionTask.isCancelled || self.recognitionTask.isFinishing) {
+        if(isFinal) {
             [self teardown];
         }
     }];
     
     AVAudioFormat* recordingFormat = [inputNode outputFormatForBus:0];
 
-    /*
     if (self.recordingEnabled) {
         NSURL *fileURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"output.wav"];
         // Re-allocate output file
@@ -208,11 +207,9 @@
             return;
         }
     }
-     */
 
     // Start recording buffer
     @try {
-        /*
         // User opted for storing recording buffer to file
         if (self.recordingEnabled && self.outputFile) {
             [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
@@ -225,8 +222,6 @@
                 } @finally {}
             }];
         }
-
-         */
         
         // Default: just append buffer to recognition request
         [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
@@ -274,17 +269,15 @@
         [self sendEventWithName:@"onSpeechError" body:error];
     }
 
-    if (bestTranscription) {
-        if ([isFinal boolValue]) {
-            [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
-        } else {
-            [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
-        }
-    } else if (transcriptions) {
+    if (transcriptions) {
         [self sendEventWithName:@"onSpeechPartialResults" body:@{@"value":transcriptions} ];
     }
+
+    if (bestTranscription && ([isFinal boolValue] == YES)) {
+        [self sendEventWithName:@"onSpeechResults" body:@{@"value":@[bestTranscription]} ];
+    }
     
-    if ([isFinal boolValue]) {
+    if ([isFinal boolValue] == YES) {
         [self sendEventWithName:@"onSpeechRecognized" body: @{@"isFinal": isFinal}];
     }
 }
@@ -410,11 +403,9 @@ RCT_EXPORT_METHOD(startSpeech:(NSString*)localeStr
         if ([options objectForKey:@"continuous"]) {
             self.continuous = [RCTConvert BOOL:options[@"continuous"]];
         }
-        /*
         if ([options objectForKey:@"recordingEnabled"]) {
             self.recordingEnabled = [RCTConvert BOOL:options[@"recordingEnabled"]];
         }
-         */
     } @catch (NSException *exception) {
         NSLog(@"[Error] - %@ %@", exception.name, exception.reason);
         self.continuous = false;
